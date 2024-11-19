@@ -16,7 +16,7 @@ class Catsegory(Base):
 
 class Category(Base):
     name = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
     parent_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
     image_url = Column(String, nullable=True)
     parent = relationship('Category', remote_side='Category.id', back_populates='subcategories')
@@ -26,6 +26,7 @@ class Category(Base):
 
 
 class FieldType(PyEnum):
+    RANGE = 'range'
     CHOICE = 'choice'
     BOOLEAN = 'boolean'
     INTEGER = 'integer'
@@ -57,6 +58,7 @@ class Advertisement(Base):
     category = relationship('Category', back_populates='advertisements')
     field_values = relationship('CategoryFieldValue', back_populates='advertisement')
     images = relationship('AdvertisementImage', back_populates='advertisement')
+    recently_viewed = relationship('RecentlyViewed', back_populates='advertisement')
 
 
 class AdvertisementImage(Base):
@@ -85,7 +87,21 @@ class RecentlyViewed(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     advertisement_id = Column(Integer, ForeignKey('advertisements.id'), nullable=False)
     user = relationship('User', back_populates='recently_viewed')
-    advertisement = relationship('Advertisement')
+    advertisement = relationship('Advertisement', back_populates='recently_viewed')
 
-
-
+# class Chat(Base):
+#     advertisement_id = Column(Integer, ForeignKey('advertisements.id'), ondelete='cascade')
+#     user_id = Column(Integer, ForeignKey('users.id'))
+#
+#     advertisement = relationship('Advertisement', back_populates='chats')
+#     user = relationship('User', back_populates='chats')
+#     messages = relationship('Message', back_populates='chat')
+#
+#
+# class Message(Base):
+#     user_id = Column(Integer, ForeignKey('users.id'))
+#     chat_id = Column(Integer, ForeignKey('chats.id'), ondelete='cascade')
+#     message = Column(String, nullable=False)
+#
+#     user = relationship('User', back_populates='messages')
+#     chat = relationship('Chat', back_populates='messages')

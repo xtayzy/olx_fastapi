@@ -1,7 +1,7 @@
 import os
 import shutil
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
@@ -38,9 +38,9 @@ router = APIRouter(prefix="/olx", tags=["olx"])
 @router.post('/category/create')
 async def create_category(
         name: str,
-        description: str,
+        description: Optional[str] = None,
         parent_id: int = 0,
-        image: UploadFile = File(...)
+        image: Optional[UploadFile] = File(None)
 ):
     parent_id = parent_id if parent_id != 0 else None
 
@@ -48,16 +48,19 @@ async def create_category(
         category = await Category.find_by_id_or_fail(parent_id)
         print(1111)
 
-    path = f'media/{image.filename}'
+    path = ''
 
-    with open(path, 'wb') as f:
-        f.write(await image.read())
+    if image:
+        path = f'media/{image.filename}'
+
+        with open(path, 'wb') as f:
+            f.write(await image.read())
 
     category = await Category.create(
         name=name,
         description=description,
         parent_id=parent_id,
-        image_url=f'127.0.0.1:8000/{path}'
+        image_url=f'127.0.0.1:8000/{path}' if image else None
     )
 
     return {
@@ -163,8 +166,27 @@ async def advertisement_category_field_value_create(data: SCategoryFieldValueCre
 
 
 @router.get('/advertisement')
-async def advertisements_get():
-    advertisements = await Advertisement.get_all(includes=['category', 'images', 'category.fields'])
+async def advertisements_get(cat_id: Optional[int] = None):
+    # Инициализируем список для хранения ID категорий
+    category_ids = [cat_id] if cat_id is not None else []  # Если нет cat_id, список пуст
+
+    # Если указана начальная категория
+    if cat_id is not None:
+        # Находим все дочерние категории
+        queue = await Category.get_all(filter=Category.parent_id == cat_id)
+
+        while queue:  # Пока есть категории в очереди
+            category = queue.pop(0)  # Берём первую из очереди
+            category_ids.append(category.id)  # Сохраняем её ID
+            # Находим подкатегории для текущей категории
+            subcategories = await Category.get_all(filter=Category.parent_id == category.id)
+            queue.extend(subcategories)  # Добавляем их в очередь
+
+    # Получаем объявления для всех категорий
+    advertisements = await Advertisement.get_all(
+        includes=['category', 'images', 'category.fields', 'field_values'],
+        filter=Advertisement.category_id.in_(category_ids) if category_ids else None
+    )
 
     return advertisements
 
@@ -231,6 +253,3 @@ async def add_recently_viewed(advertisement_id: int, user: User = Depends(get_cu
     )
 
     return recently_viewed
-
-
-

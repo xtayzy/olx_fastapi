@@ -16,8 +16,7 @@ app.include_router(router_user)
 app.mount('/media', StaticFiles(directory='media'), name='media')
 admin = Admin(app, engine=engine, authentication_backend=authentication_backend)
 origins = [
-    "http:localhost:5173",
-    "*"
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -27,7 +26,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-
-
